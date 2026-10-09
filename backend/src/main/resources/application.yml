@@ -1,0 +1,47 @@
+server:
+  port: 8000
+
+spring:
+  application:
+    name: phonebook-spring-boot
+  datasource:
+    # Local development default: a SEPARATE database from the Python app.
+    # Override with SPRING_DATASOURCE_URL / SPRING_DATASOURCE_USERNAME /
+    # SPRING_DATASOURCE_PASSWORD (or POSTGRES_USER / POSTGRES_PASSWORD).
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/phonebook_spring}
+    username: ${SPRING_DATASOURCE_USERNAME:${POSTGRES_USER:phonebook}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${POSTGRES_PASSWORD:phonebook}}
+  jpa:
+    hibernate:
+      # Schema is managed by Flyway only - never let Hibernate create,
+      # update or drop tables (protects existing databases).
+      ddl-auto: none
+    open-in-view: false
+  flyway:
+    enabled: true
+    # Safe when pointed at a database that already contains the tables
+    # (e.g. one created by the Python app): Flyway baselines instead of
+    # trying to re-create them.
+    baseline-on-migrate: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+
+jwt:
+  # JWT_SECRET_KEY is preferred; SECRET_KEY is accepted as a fallback
+  # for compatibility with the Python project's .env files.
+  secret-key: ${JWT_SECRET_KEY:${SECRET_KEY:}}
+  expiration-minutes: 720
+
+seed:
+  create-user: false
+  username:
+  password: ${SEED_PASSWORD:}
+  email:
+  count: 0

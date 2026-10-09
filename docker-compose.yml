@@ -1,0 +1,48 @@
+# Isolated Compose project: this creates its own network and its own
+# "phonebook-spring-boot_pgdata" volume, completely separate from the
+# Python project's "phonebookpython_pgdata" volume.
+name: phonebook-spring-boot
+
+services:
+  # --- Database: PostgreSQL in its own container (own volume) ---
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-phonebook}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-phonebook}
+      POSTGRES_DB: ${POSTGRES_DB:-phonebook_spring}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-phonebook} -d ${POSTGRES_DB:-phonebook}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # --- Backend: Spring Boot app (replaces the FastAPI service) ---
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-phonebook_spring}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-phonebook}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-phonebook}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-${SECRET_KEY:-}}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # --- Frontend: Vue 3 app built by Vite and served by nginx (unchanged) ---
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
